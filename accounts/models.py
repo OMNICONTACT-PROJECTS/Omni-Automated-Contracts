@@ -10,7 +10,7 @@ class User(AbstractUser):
     email = None
 
     GENDER = (
-    ("MALE", "MALE"),
+        ("MALE", "MALE"),
         ("FEMALE", "FEMALE"),
     )
     ROLE = (

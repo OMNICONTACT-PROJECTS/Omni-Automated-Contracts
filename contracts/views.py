@@ -72,7 +72,9 @@ class GetAllUnsignedContractsByOrganisationId(GenericAPIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
         else:
-            contract = self.queryset.filter(organisation_id=organisation_id)
+            contract = self.queryset.filter(organisation_id=organisation_id).order_by(
+                "-contract_upload_date"
+            )
             serializer = self.serializer_class(contract, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -166,7 +168,7 @@ class GetAllSignedContractsByOrganisationId(GenericAPIView):
         else:
             contract = self.queryset.filter(
                 unsigned_contract__organisation_id=organisation_id
-            )
+            ).order_by("-contract_signed_date")
             serializer = self.serializer_class(contract, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -214,13 +216,45 @@ class GetSignedContractsByUnsignedContractId(GenericAPIView):
 
     def get(self, request, unsigned_contract_id):
         try:
-            SignedContract.objects.get(pk=unsigned_contract_id)
-        except SignedContract.DoesNotExist:
+            UnsignedContract.objects.get(pk=unsigned_contract_id)
+        except UnsignedContract.DoesNotExist:
             return Response(
                 data={"message": "Unsigned Contract does not exist"},
                 status=status.HTTP_404_NOT_FOUND,
             )
         else:
-            contracts = self.queryset.filter(unsigned_contract=unsigned_contract_id)
+            contracts = self.queryset.filter(
+                unsigned_contract_id=unsigned_contract_id
+            ).order_by("-contract_signed_date")
+            serializer = self.serializer_class(contracts, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class UnsignedContractsWithSignaturesListView(GenericAPIView):
+    permission_classes = []
+    serializer_class = RetrieveUnsignedContractSerializer
+    queryset = UnsignedContract.objects.all()
+
+    def get(self, request, organisation_id):
+        try:
+            Organisation.objects.get(pk=organisation_id)
+        except Organisation.DoesNotExist:
+            return Response(
+                data={"message": "Organisation does not exist"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        else:
+            # unsigned_contracts = (
+            #     UnsignedContract.objects.filter(
+            #         signed_contracts__isnull=False  # Ensure there are signed contracts
+            #     )
+            #     .order_by("-contract_upload_date")
+            #     .distinct()
+            # )
+            contracts = (
+                self.queryset.filter(signed_contracts__isnull=False)
+                .order_by("-contract_upload_date")
+                .distinct()
+            )
             serializer = self.serializer_class(contracts, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)

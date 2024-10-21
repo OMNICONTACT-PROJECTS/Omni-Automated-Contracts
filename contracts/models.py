@@ -23,7 +23,11 @@ class UnsignedContract(models.Model):
 
 class SignedContract(models.Model):
     unsigned_contract = models.ForeignKey(
-        UnsignedContract, on_delete=models.CASCADE, blank=False, null=False
+        UnsignedContract,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+        related_name="signed_contracts",
     )
     signee_first_name = models.CharField(max_length=255, blank=False, null=False)
     signee_last_name = models.CharField(max_length=255, blank=False, null=False)

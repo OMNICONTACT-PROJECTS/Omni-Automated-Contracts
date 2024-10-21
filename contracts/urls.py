@@ -30,4 +30,9 @@ urlpatterns = [
         "signed-contracts/get-by-unsigned-contract-id/<int:unsigned_contract_id>/",
         views.GetSignedContractsByUnsignedContractId.as_view(),
     ),
+    path(
+        "unsigned-contracts-with-signatures/<int:organisation_id>",
+        views.UnsignedContractsWithSignaturesListView.as_view(),
+        name="unsigned-contracts-with-signatures",
+    ),
 ]
