@@ -268,25 +268,36 @@ class ContractStatsView(GenericAPIView):
                 data={"message": "Organisation does not exist"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        else:
-            signed_contracts = (
-                UnsignedContract.objects.filter(
-                    signed_contracts__isnull=False, organisation_id=organisation_id
-                )
-                .order_by("-contract_upload_date")
-                .distinct()
-            ).count()
-            all_contracts = self.queryset.filter(
-                organisation_id=organisation_id
-            ).count()
-            total_signatures = SignedContract.objects.filter(
-                unsigned_contract__organisation_id=organisation_id
-            ).count()
 
-            stats = {
-                "total_signed_contracts": signed_contracts,
-                "total_contracts": all_contracts,
-                "total_unsigned_contracts": (all_contracts - signed_contracts),
-                "total_signatures": total_signatures,
-            }
-            return Response(stats, status=status.HTTP_200_OK)
+        signed_contracts = (
+            UnsignedContract.objects.filter(
+                signed_contracts__isnull=False, organisation_id=organisation_id
+            )
+            .order_by("-contract_upload_date")
+            .distinct()
+        ).count()
+
+        all_contracts = self.queryset.filter(organisation_id=organisation_id).count()
+
+        total_signatures = SignedContract.objects.filter(
+            unsigned_contract__organisation_id=organisation_id
+        ).count()
+
+        # Calculate percentages
+        if all_contracts > 0:
+            signed_percentage = (signed_contracts / all_contracts) * 100
+            unsigned_percentage = 100 - signed_percentage
+        else:
+            signed_percentage = 0
+            unsigned_percentage = 0
+
+        stats = {
+            "total_signed_contracts": signed_contracts,
+            "total_contracts": all_contracts,
+            "total_unsigned_contracts": (all_contracts - signed_contracts),
+            "total_signatures": total_signatures,
+            "signed_percentage": round(signed_percentage, 2),
+            "unsigned_percentage": round(unsigned_percentage, 2),
+        }
+
+        return Response(stats, status=status.HTTP_200_OK)
