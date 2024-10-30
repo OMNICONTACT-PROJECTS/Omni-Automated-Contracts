@@ -244,17 +244,49 @@ class UnsignedContractsWithSignaturesListView(GenericAPIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
         else:
-            # unsigned_contracts = (
-            #     UnsignedContract.objects.filter(
-            #         signed_contracts__isnull=False  # Ensure there are signed contracts
-            #     )
-            #     .order_by("-contract_upload_date")
-            #     .distinct()
-            # )
             contracts = (
-                self.queryset.filter(signed_contracts__isnull=False)
+                self.queryset.filter(
+                    signed_contracts__isnull=False, organisation_id=organisation_id
+                )
                 .order_by("-contract_upload_date")
                 .distinct()
             )
             serializer = self.serializer_class(contracts, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ContractStatsView(GenericAPIView):
+    permission_classes = []
+    serializer_class = RetrieveUnsignedContractSerializer
+    queryset = UnsignedContract.objects.all()
+
+    def get(self, request, organisation_id):
+        try:
+            Organisation.objects.get(pk=organisation_id)
+        except Organisation.DoesNotExist:
+            return Response(
+                data={"message": "Organisation does not exist"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        else:
+            signed_contracts = (
+                UnsignedContract.objects.filter(
+                    signed_contracts__isnull=False, organisation_id=organisation_id
+                )
+                .order_by("-contract_upload_date")
+                .distinct()
+            ).count()
+            all_contracts = self.queryset.filter(
+                organisation_id=organisation_id
+            ).count()
+            total_signatures = SignedContract.objects.filter(
+                unsigned_contract__organisation_id=organisation_id
+            ).count()
+
+            stats = {
+                "total_signed_contracts": signed_contracts,
+                "total_contracts": all_contracts,
+                "total_unsigned_contracts": (all_contracts - signed_contracts),
+                "total_signatures": total_signatures,
+            }
+            return Response(stats, status=status.HTTP_200_OK)
